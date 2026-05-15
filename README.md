@@ -7,7 +7,7 @@ Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts
 ## What it does
 
 - Syncs all your Granola meeting notes to `~/Documents/Cookie Jar/` as Markdown and JSON files
-- Runs automatically every 15 minutes in the background
+- Runs automatically every hour in the background
 - Installs a one-click app you can pin to your Dock for manual syncs
 - Stores your API key securely in macOS Keychain (not a plaintext file)
 - Sends a macOS notification when new notes are synced

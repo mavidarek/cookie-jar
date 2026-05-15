@@ -93,8 +93,8 @@ if [[ -f "$ICON_SRC" ]]; then
     echo "  App icon set"
 fi
 
-# --- Install LaunchAgent (every 15 minutes) ---
-echo "Setting up automatic sync (every 15 minutes)..."
+# --- Install LaunchAgent (every hour on the hour) ---
+echo "Setting up automatic sync (every hour)..."
 mkdir -p "$LOG_DIR"
 mkdir -p "$(dirname "$LAUNCH_AGENT")"
 
@@ -111,8 +111,11 @@ cat > "$LAUNCH_AGENT" << PLIST
         <string>$VENV_DIR/bin/python3</string>
         <string>$INSTALL_DIR/cookie-jar.py</string>
     </array>
-    <key>StartInterval</key>
-    <integer>900</integer>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
     <key>StandardOutPath</key>
     <string>$LOG_DIR/cookie-jar.log</string>
     <key>StandardErrorPath</key>
@@ -145,7 +148,7 @@ echo ""
 echo ""
 echo "=== Installation complete ==="
 echo ""
-echo "  Cookie Jar is now syncing your Granola notes every 15 minutes."
+echo "  Cookie Jar is now syncing your Granola notes every hour."
 echo "  Find 'Cookie Jar' in Spotlight or ~/Applications to run manually."
 echo "  Your meeting notes sync to: ~/Documents/Cookie Jar/"
 echo ""
