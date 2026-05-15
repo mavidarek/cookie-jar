@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Cookie Jar — Granola transcript sync via the official REST API.
-Fetches all meeting notes, summaries, and transcripts to ~/Documents/granola/.
+Fetches all meeting notes, summaries, and transcripts to local files.
 
 No LLM, no MCP, no OAuth. Just httpx + API key.
 Evergreen: safe to re-run, self-healing.
@@ -19,7 +19,7 @@ import httpx
 
 # --- Config ---
 API_BASE = "https://public-api.granola.ai/v1"
-GRANOLA_DIR = Path.home() / "Documents" / "granola"
+GRANOLA_DIR = Path.home() / "Documents" / "Cookie Jar"
 ENV_FILE = Path.home() / ".config" / "granola-sync" / ".env"  # legacy, migrated to Keychain
 ID_MAP_FILE = GRANOLA_DIR / "id_map.json"
 KEYCHAIN_SERVICE = "cookie-jar"
@@ -433,6 +433,14 @@ def sync():
         notify("Cookie Jar", f"{stats['errors']} error(s) — check logs")
     elif manual:
         notify("Cookie Jar", f"All {total} notes up to date")
+
+    # Open Finder with newest file selected on manual runs
+    if manual:
+        md_files = sorted(GRANOLA_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+        if md_files:
+            subprocess.run(["open", "-R", str(md_files[0])])
+        else:
+            subprocess.run(["open", str(GRANOLA_DIR)])
 
 
 if __name__ == "__main__":

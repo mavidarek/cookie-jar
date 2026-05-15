@@ -6,7 +6,7 @@ Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts
 
 ## What it does
 
-- Syncs all your Granola meeting notes to `~/Documents/granola/` as Markdown and JSON files
+- Syncs all your Granola meeting notes to `~/Documents/Cookie Jar/` as Markdown and JSON files
 - Runs automatically every 15 minutes in the background
 - Installs a one-click app you can pin to your Dock for manual syncs
 - Stores your API key securely in macOS Keychain (not a plaintext file)
@@ -32,7 +32,7 @@ That's it. Your notes will start syncing immediately.
 Add this to your `CLAUDE.md` to give Claude access to your meeting notes:
 
 ```
-Meeting transcripts from Granola sync to ~/Documents/granola/ as .md and .json files.
+Meeting transcripts from Granola sync to ~/Documents/Cookie Jar/ as .md and .json files via the Cookie Jar app.
 Each file is named YYYY-MM-DD_Meeting-Title.md and contains the date, participants, AI summary, and full transcript.
 Search them by date, participant name, or topic when I reference a meeting.
 ```
@@ -45,7 +45,7 @@ Search them by date, participant name, or topic when I reference a meeting.
 | Python venv | `~/.cookie-jar/venv/` |
 | App | `~/Applications/Cookie Jar.app` |
 | Background job | `~/Library/LaunchAgents/com.cookie-jar.plist` |
-| Synced notes | `~/Documents/granola/` |
+| Synced notes | `~/Documents/Cookie Jar/` |
 | Logs | `~/logs/cookie-jar.log` |
 | API key | macOS Keychain (service: `cookie-jar`) |
 
@@ -59,7 +59,7 @@ rm ~/Library/LaunchAgents/com.cookie-jar.plist
 security delete-generic-password -s cookie-jar -a api-key
 ```
 
-Your synced notes in `~/Documents/granola/` are not deleted.
+Your synced notes in `~/Documents/Cookie Jar/` are not deleted.
 
 ## Security
 
