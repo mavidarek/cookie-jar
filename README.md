@@ -18,7 +18,7 @@ Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts
 2. Open Terminal and run:
 
 ```bash
-git clone https://github.com/DropDev-Foundation/cookie-jar.git
+git clone https://github.com/mavidarek/cookie-jar.git
 cd cookie-jar
 ./install.sh
 ```
