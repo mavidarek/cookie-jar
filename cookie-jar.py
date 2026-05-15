@@ -22,9 +22,10 @@ API_BASE = "https://public-api.granola.ai/v1"
 GRANOLA_DIR = Path.home() / "Documents" / "Cookie Jar"
 ENV_FILE = Path.home() / ".config" / "granola-sync" / ".env"  # legacy, migrated to Keychain
 ID_MAP_FILE = GRANOLA_DIR / "id_map.json"
+STATE_FILE = GRANOLA_DIR / ".sync_state.json"
 KEYCHAIN_SERVICE = "cookie-jar"
 KEYCHAIN_ACCOUNT = "api-key"
-LOOKBACK_DATE = "2026-01-01T00:00:00Z"  # fetch everything from this date forward
+FULL_LOOKBACK = "2024-01-01T00:00:00Z"  # first-run: fetch everything
 BASE_DELAY = 1.0  # seconds between requests (well under 5/sec limit)
 MAX_RETRIES = 3
 
@@ -144,6 +145,16 @@ def save_id_map(id_map: dict):
     ID_MAP_FILE.write_text(json.dumps(id_map, indent=2), encoding="utf-8")
 
 
+def load_sync_state() -> dict:
+    if STATE_FILE.exists():
+        return json.loads(STATE_FILE.read_text())
+    return {}
+
+
+def save_sync_state(state: dict):
+    STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
 def is_corrupted(transcript_value) -> bool:
     """Check if a transcript field contains error text instead of real content."""
     if not transcript_value:
@@ -208,7 +219,7 @@ def write_note_files(note_id: str, note_data: dict):
 def cleanup_corrupted(stats: dict):
     """Phase 0: Find and reset corrupted transcript files."""
     for f in GRANOLA_DIR.glob("*.json"):
-        if f.name in ("id_map.json", "index.json"):
+        if f.name in ("id_map.json", "index.json", ".sync_state.json"):
             continue
         try:
             data = json.loads(f.read_text())
@@ -245,6 +256,8 @@ def sync():
     GRANOLA_DIR.mkdir(parents=True, exist_ok=True)
     api_key = load_api_key()
     id_map = load_id_map()
+    state = load_sync_state()
+    manual = "--manual" in sys.argv
 
     stats = {
         "corrupted_fixed": 0,
@@ -262,8 +275,16 @@ def sync():
     else:
         print("  None found")
 
-    # Phase 1: List all notes from API
-    print("\n=== Phase 1: Listing all notes from Granola ===")
+    # Determine lookback: first run fetches everything, subsequent runs check last 48h
+    last_sync = state.get("last_sync")
+    if last_sync and not manual:
+        from datetime import datetime, timedelta, timezone
+        lookback = (datetime.now(timezone.utc) - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        print(f"\n=== Phase 1: Checking for new notes (since {lookback[:10]}) ===")
+    else:
+        lookback = FULL_LOOKBACK
+        print("\n=== Phase 1: Listing all notes from Granola ===")
+
     client = httpx.Client(
         headers={"Authorization": f"Bearer {api_key}"},
         timeout=30,
@@ -275,7 +296,7 @@ def sync():
 
     while True:
         page += 1
-        params = {"created_after": LOOKBACK_DATE}
+        params = {"created_after": lookback}
         if cursor:
             params["cursor"] = cursor
 
@@ -406,7 +427,7 @@ def sync():
     total = 0
     with_transcript = 0
     for f in GRANOLA_DIR.glob("*.json"):
-        if f.name in ("id_map.json", "index.json"):
+        if f.name in ("id_map.json", "index.json", ".sync_state.json"):
             continue
         total += 1
         try:
@@ -419,7 +440,10 @@ def sync():
     print(f"  With transcript:     {with_transcript}")
     print(f"  Remaining:           {total - with_transcript}")
 
-    manual = "--manual" in sys.argv
+    # Save sync state
+    from datetime import datetime, timezone
+    save_sync_state({"last_sync": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "total": total})
+
     has_changes = stats["new_notes"] or stats["transcripts_fetched"]
 
     if has_changes:
