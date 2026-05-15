@@ -47,7 +47,6 @@ mkdir -p "$APP_DIR/Contents/Resources"
 cat > "$APP_DIR/Contents/MacOS/cookie-jar" << WRAPPER
 #!/bin/bash
 "$VENV_DIR/bin/python3" "$INSTALL_DIR/cookie-jar.py" --manual
-open "$HOME/Documents/Cookie Jar" >/dev/null 2>&1 || true
 sleep 5
 WRAPPER
 chmod +x "$APP_DIR/Contents/MacOS/cookie-jar"
