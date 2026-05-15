@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 Cookie Jar — Granola transcript sync via the official REST API.
 Fetches all meeting notes, summaries, and transcripts to local files.
