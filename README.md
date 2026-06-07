@@ -1,4 +1,4 @@
-# Cookie Jar
+# Oatmeal
 
 Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts, and summaries to your Mac as local files.
 
@@ -6,7 +6,7 @@ Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts
 
 ## What it does
 
-- Syncs all your Granola meeting notes to `~/Documents/Cookie Jar/` as Markdown and JSON files
+- Syncs all your Granola meeting notes to `~/Documents/Oatmeal/` as Markdown and JSON files
 - Runs automatically every hour in the background
 - Installs a one-click app you can pin to your Dock for manual syncs
 - Stores your API key securely in macOS Keychain (not a plaintext file)
@@ -18,8 +18,8 @@ Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts
 2. Open Terminal and run:
 
 ```bash
-git clone https://github.com/mavidarek/cookie-jar.git
-cd cookie-jar
+git clone https://github.com/mavidarek/oatmeal.git
+cd oatmeal
 ./install.sh
 ```
 
@@ -32,7 +32,7 @@ That's it. Your notes will start syncing immediately.
 Add this to your `CLAUDE.md` to give Claude access to your meeting notes:
 
 ```
-Meeting transcripts from Granola sync to ~/Documents/Cookie Jar/ as .md and .json files via the Cookie Jar app.
+Meeting transcripts from Granola sync to ~/Documents/Oatmeal/ as .md and .json files via the Oatmeal app.
 Each file is named YYYY-MM-DD_Meeting-Title.md and contains the date, participants, AI summary, and full transcript.
 Search them by date, participant name, or topic when I reference a meeting.
 ```
@@ -41,25 +41,25 @@ Search them by date, participant name, or topic when I reference a meeting.
 
 | What | Where |
 |------|-------|
-| Sync script | `~/.cookie-jar/cookie-jar.py` |
-| Python venv | `~/.cookie-jar/venv/` |
-| App | `~/Applications/Cookie Jar.app` |
-| Background job | `~/Library/LaunchAgents/com.cookie-jar.plist` |
-| Synced notes | `~/Documents/Cookie Jar/` |
-| Logs | `~/logs/cookie-jar.log` |
-| API key | macOS Keychain (service: `cookie-jar`) |
+| Sync script | `~/.oatmeal/oatmeal.py` |
+| Python venv | `~/.oatmeal/venv/` |
+| App | `~/Applications/Oatmeal.app` |
+| Background job | `~/Library/LaunchAgents/com.oatmeal.plist` |
+| Synced notes | `~/Documents/Oatmeal/` |
+| Logs | `~/logs/oatmeal.log` |
+| API key | macOS Keychain (service: `oatmeal`) |
 
 ## Uninstall
 
 ```bash
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.cookie-jar.plist
-rm -rf ~/.cookie-jar
-rm -rf ~/Applications/Cookie\ Jar.app
-rm ~/Library/LaunchAgents/com.cookie-jar.plist
-security delete-generic-password -s cookie-jar -a api-key
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.oatmeal.plist
+rm -rf ~/.oatmeal
+rm -rf ~/Applications/Oatmeal.app
+rm ~/Library/LaunchAgents/com.oatmeal.plist
+security delete-generic-password -s oatmeal -a api-key
 ```
 
-Your synced notes in `~/Documents/Cookie Jar/` are not deleted.
+Your synced notes in `~/Documents/Oatmeal/` are not deleted.
 
 ## Security
 

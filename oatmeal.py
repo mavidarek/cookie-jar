@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 """
-Cookie Jar — Granola transcript sync via the official REST API.
+Oatmeal — Granola transcript sync via the official REST API.
 Fetches all meeting notes, summaries, and transcripts to local files.
 
 No LLM, no MCP, no OAuth. Just httpx + API key.
@@ -19,32 +19,27 @@ import subprocess
 import httpx
 
 # --- Config ---
+APP_NAME = "Oatmeal"
 API_BASE = "https://public-api.granola.ai/v1"
-GRANOLA_DIR = Path.home() / "Documents" / "Cookie Jar"
-ENV_FILE = Path.home() / ".config" / "granola-sync" / ".env"  # legacy, migrated to Keychain
-ID_MAP_FILE = GRANOLA_DIR / "id_map.json"
-STATE_FILE = GRANOLA_DIR / ".sync_state.json"
-KEYCHAIN_SERVICE = "cookie-jar"
+NOTES_DIR = Path.home() / "Documents" / "Oatmeal"
+ID_MAP_FILE = NOTES_DIR / "id_map.json"
+STATE_FILE = NOTES_DIR / ".sync_state.json"
+KEYCHAIN_SERVICE = "oatmeal"
 KEYCHAIN_ACCOUNT = "api-key"
 FULL_LOOKBACK = "2024-01-01T00:00:00Z"  # first-run: fetch everything
 BASE_DELAY = 1.0  # seconds between requests (well under 5/sec limit)
 MAX_RETRIES = 3
 
-# Error strings that indicate a corrupted transcript (only match whole-message errors)
-CORRUPTION_MARKERS = [
-    "rate limit exceeded",
-    "too many requests",
-    "503 service unavailable",
-    "502 bad gateway",
-    "unauthorized",
-    "internal server error",
-]
+# Internal files that live alongside the notes but are not themselves notes.
+RESERVED_FILES = {"id_map.json", ".sync_state.json"}
 
 
 def notify(title: str, message: str):
+    def esc(s: str) -> str:
+        return s.replace("\\", "\\\\").replace('"', '\\"')
     subprocess.run([
         "osascript", "-e",
-        f'display notification "{message}" with title "{title}"',
+        f'display notification "{esc(message)}" with title "{esc(title)}"',
     ])
 
 
@@ -94,9 +89,9 @@ def keychain_set(api_key: str):
 
 
 def prompt_for_api_key() -> str | None:
-    script = '''
+    script = f'''
     tell application "System Events"
-        display dialog "Paste your Granola API key:" & return & return & "Find it at: granola.ai → Settings → API" with title "Cookie Jar Setup" default answer "" with hidden answer
+        display dialog "Paste your Granola API key:" & return & return & "Find it at: granola.ai → Settings → API" with title "{APP_NAME} Setup" default answer "" with hidden answer
         set theKey to text returned of result
         if theKey is "" then return ""
         return theKey
@@ -114,24 +109,14 @@ def load_api_key() -> str:
     if key:
         return key
 
-    # Migrate from legacy .env file
-    if ENV_FILE.exists():
-        for line in ENV_FILE.read_text().strip().splitlines():
-            if line.startswith("GRANOLA_API_KEY="):
-                key = line.split("=", 1)[1].strip()
-                if key:
-                    print("  Migrating API key from .env to Keychain...")
-                    keychain_set(key)
-                    return key
-
     # First run — prompt the user
     key = prompt_for_api_key()
     if not key:
-        notify("Cookie Jar", "Setup cancelled — no API key provided")
+        notify(APP_NAME, "Setup cancelled — no API key provided")
         sys.exit(1)
 
     keychain_set(key)
-    notify("Cookie Jar", "API key saved to Keychain ✓")
+    notify(APP_NAME, "API key saved to Keychain ✓")
     return key
 
 
@@ -156,21 +141,6 @@ def save_sync_state(state: dict):
     STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
-def is_corrupted(transcript_value) -> bool:
-    """Check if a transcript field contains error text instead of real content."""
-    if not transcript_value:
-        return False
-    # Structured transcripts (list of dicts) from the REST API are never corrupted
-    if isinstance(transcript_value, list):
-        return False
-    # Only string transcripts (from old MCP runs) can be corrupted
-    text = str(transcript_value).lower().strip()
-    for marker in CORRUPTION_MARKERS:
-        if marker in text:
-            return True
-    return False
-
-
 def format_transcript_text(transcript_data: list) -> str:
     """Convert structured transcript JSON to readable plain text."""
     if not transcript_data:
@@ -187,8 +157,8 @@ def format_transcript_text(transcript_data: list) -> str:
 
 def write_note_files(note_id: str, note_data: dict):
     """Write/update the .json and .md files for a note."""
-    json_path = GRANOLA_DIR / f"{note_id}.json"
-    md_path = GRANOLA_DIR / f"{note_id}.md"
+    json_path = NOTES_DIR / f"{note_id}.json"
+    md_path = NOTES_DIR / f"{note_id}.md"
 
     # Write JSON (full API response)
     json_path.write_text(json.dumps(note_data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -217,23 +187,6 @@ def write_note_files(note_id: str, note_data: dict):
     md_path.write_text("\n".join(md_parts), encoding="utf-8")
 
 
-def cleanup_corrupted(stats: dict):
-    """Phase 0: Find and reset corrupted transcript files."""
-    for f in GRANOLA_DIR.glob("*.json"):
-        if f.name in ("id_map.json", "index.json", ".sync_state.json"):
-            continue
-        try:
-            data = json.loads(f.read_text())
-            transcript = data.get("transcript")
-            if transcript and is_corrupted(transcript):
-                print(f"  Fixing corrupted: {f.stem[:12]}... ({data.get('title', '')[:40]})")
-                data["transcript"] = ""
-                f.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-                stats["corrupted_fixed"] += 1
-        except Exception:
-            pass
-
-
 def api_get(client: httpx.Client, path: str, params: dict | None = None) -> httpx.Response:
     """Make an API request with retry + exponential backoff on 429."""
     delay = BASE_DELAY
@@ -254,37 +207,28 @@ def api_get(client: httpx.Client, path: str, params: dict | None = None) -> http
 
 
 def sync():
-    GRANOLA_DIR.mkdir(parents=True, exist_ok=True)
+    NOTES_DIR.mkdir(parents=True, exist_ok=True)
     api_key = load_api_key()
     id_map = load_id_map()
     state = load_sync_state()
     manual = "--manual" in sys.argv
 
     stats = {
-        "corrupted_fixed": 0,
         "new_notes": 0,
         "transcripts_fetched": 0,
         "skipped": 0,
         "errors": 0,
     }
 
-    # Phase 0: Cleanup corrupted files
-    print("=== Phase 0: Cleaning up corrupted files ===")
-    cleanup_corrupted(stats)
-    if stats["corrupted_fixed"]:
-        print(f"  Fixed {stats['corrupted_fixed']} corrupted files")
-    else:
-        print("  None found")
-
     # Determine lookback: first run fetches everything, subsequent runs check last 48h
     last_sync = state.get("last_sync")
     if last_sync and not manual:
         from datetime import datetime, timedelta, timezone
         lookback = (datetime.now(timezone.utc) - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        print(f"\n=== Phase 1: Checking for new notes (since {lookback[:10]}) ===")
+        print(f"=== Phase 1: Checking for new notes (since {lookback[:10]}) ===")
     else:
         lookback = FULL_LOOKBACK
-        print("\n=== Phase 1: Listing all notes from Granola ===")
+        print("=== Phase 1: Listing all notes from Granola ===")
 
     client = httpx.Client(
         headers={"Authorization": f"Bearer {api_key}"},
@@ -319,8 +263,7 @@ def sync():
     print(f"  Total notes from API: {len(all_notes)}")
 
     # Build/update ID map and create stubs for new notes
-    existing_not_ids = set(id_map.keys())
-    existing_files = {f.stem for f in GRANOLA_DIR.glob("*.json") if f.name not in ("id_map.json", "index.json")}
+    existing_files = {f.stem for f in NOTES_DIR.glob("*.json") if f.name not in RESERVED_FILES}
 
     for note in all_notes:
         not_id = note["id"]
@@ -356,12 +299,12 @@ def sync():
     # Phase 2: Fetch full notes + transcripts for those that need it
     print("\n=== Phase 2: Fetching transcripts ===")
 
-    # Find notes that need transcripts (empty, corrupted, or missing summary)
+    # Find notes that need transcripts (missing summary = never successfully fetched)
     needs_fetch = []
     for note in all_notes:
         not_id = note["id"]
         filename = id_map.get(not_id, not_id)
-        json_path = GRANOLA_DIR / f"{filename}.json"
+        json_path = NOTES_DIR / f"{filename}.json"
 
         if not json_path.exists():
             needs_fetch.append((not_id, filename, note.get("title", "")))
@@ -369,11 +312,8 @@ def sync():
 
         try:
             existing = json.loads(json_path.read_text())
-            transcript = existing.get("transcript")
             summary = existing.get("summary_text") or existing.get("summary_markdown")
-
-            # Re-fetch if: corrupted transcript, or no summary (never successfully fetched)
-            if is_corrupted(transcript) or not summary:
+            if not summary:
                 needs_fetch.append((not_id, filename, note.get("title", "")))
         except Exception:
             needs_fetch.append((not_id, filename, note.get("title", "")))
@@ -399,15 +339,8 @@ def sync():
                 continue
 
             note_data = r.json()
-
-            # Validate transcript before writing
-            transcript = note_data.get("transcript")
-            if transcript and is_corrupted(transcript):
-                print(f"    Skipped (response looks like error)")
-                stats["errors"] += 1
-                continue
-
             write_note_files(filename, note_data)
+            transcript = note_data.get("transcript")
             t_len = len(json.dumps(transcript)) if transcript else 0
             print(f"    OK ({t_len} chars transcript, has summary: {bool(note_data.get('summary_text'))})")
             stats["transcripts_fetched"] += 1
@@ -418,7 +351,6 @@ def sync():
 
     # Summary
     print("\n=== Summary ===")
-    print(f"  Corrupted fixed:    {stats['corrupted_fixed']}")
     print(f"  New notes created:  {stats['new_notes']}")
     print(f"  Transcripts fetched:{stats['transcripts_fetched']}")
     print(f"  Skipped (no AI):    {stats['skipped']}")
@@ -427,13 +359,13 @@ def sync():
     # Count final state
     total = 0
     with_transcript = 0
-    for f in GRANOLA_DIR.glob("*.json"):
-        if f.name in ("id_map.json", "index.json", ".sync_state.json"):
+    for f in NOTES_DIR.glob("*.json"):
+        if f.name in RESERVED_FILES:
             continue
         total += 1
         try:
             d = json.loads(f.read_text())
-            if d.get("transcript") and not is_corrupted(d["transcript"]):
+            if d.get("transcript"):
                 with_transcript += 1
         except Exception:
             pass
@@ -453,19 +385,19 @@ def sync():
             parts.append(f"{stats['new_notes']} new")
         if stats["transcripts_fetched"]:
             parts.append(f"{stats['transcripts_fetched']} transcripts")
-        notify("Cookie Jar", f"Synced {', '.join(parts)} ({total} total)")
+        notify(APP_NAME, f"Synced {', '.join(parts)} ({total} total)")
     elif stats["errors"]:
-        notify("Cookie Jar", f"{stats['errors']} error(s) — check logs")
+        notify(APP_NAME, f"{stats['errors']} error(s) — check logs")
     elif manual:
-        notify("Cookie Jar", f"All {total} notes up to date")
+        notify(APP_NAME, f"All {total} notes up to date")
 
     # Open Finder with newest file selected on manual runs
     if manual:
-        md_files = sorted(GRANOLA_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+        md_files = sorted(NOTES_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
         if md_files:
             subprocess.run(["open", "-R", str(md_files[0])])
         else:
-            subprocess.run(["open", str(GRANOLA_DIR)])
+            subprocess.run(["open", str(NOTES_DIR)])
 
 
 if __name__ == "__main__":
