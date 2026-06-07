@@ -6,7 +6,7 @@ Automatically sync your [Granola](https://granola.ai) meeting notes, transcripts
 
 ## What it does
 
-- Syncs all your Granola meeting notes to `~/Documents/Oatmeal/` as Markdown and JSON files
+- Syncs all your Granola meeting notes to `~/Oatmeal/` as Markdown and JSON files
 - Runs automatically every hour in the background
 - Installs a one-click app you can pin to your Dock for manual syncs
 - Stores your API key securely in macOS Keychain (not a plaintext file)
@@ -32,7 +32,7 @@ That's it. Your notes will start syncing immediately.
 Add this to your `CLAUDE.md` to give Claude access to your meeting notes:
 
 ```
-Meeting transcripts from Granola sync to ~/Documents/Oatmeal/ as .md and .json files via the Oatmeal app.
+Meeting transcripts from Granola sync to ~/Oatmeal/ as .md and .json files via the Oatmeal app.
 Each file is named YYYY-MM-DD_Meeting-Title.md and contains the date, participants, AI summary, and full transcript.
 Search them by date, participant name, or topic when I reference a meeting.
 ```
@@ -45,7 +45,7 @@ Search them by date, participant name, or topic when I reference a meeting.
 | Python venv | `~/.oatmeal/venv/` |
 | App | `~/Applications/Oatmeal.app` |
 | Background job | `~/Library/LaunchAgents/com.oatmeal.plist` |
-| Synced notes | `~/Documents/Oatmeal/` |
+| Synced notes | `~/Oatmeal/` |
 | Logs | `~/logs/oatmeal.log` |
 | API key | macOS Keychain (service: `oatmeal`) |
 
@@ -59,7 +59,7 @@ rm ~/Library/LaunchAgents/com.oatmeal.plist
 security delete-generic-password -s oatmeal -a api-key
 ```
 
-Your synced notes in `~/Documents/Oatmeal/` are not deleted.
+Your synced notes in `~/Oatmeal/` are not deleted.
 
 ## Security
 

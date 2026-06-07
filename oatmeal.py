@@ -21,7 +21,7 @@ import httpx
 # --- Config ---
 APP_NAME = "Oatmeal"
 API_BASE = "https://public-api.granola.ai/v1"
-NOTES_DIR = Path.home() / "Documents" / "Oatmeal"
+NOTES_DIR = Path.home() / "Oatmeal"
 ID_MAP_FILE = NOTES_DIR / "id_map.json"
 STATE_FILE = NOTES_DIR / ".sync_state.json"
 KEYCHAIN_SERVICE = "oatmeal"
