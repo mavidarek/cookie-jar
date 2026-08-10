@@ -21,6 +21,16 @@ stage at `~/mycelium/scripts/oatmeal/` distills those notes into briefs in
   deliberately decommissioned 2026-06-07 for the Chico firewall. If an agent
   should ever ingest meeting notes, the right home is Vayu.
 
+## Operational facts
+
+- **The repo is not what runs.** `install.sh` copies `oatmeal.py` to
+  `~/.oatmeal/oatmeal.py`, and the LaunchAgent executes that copy with the
+  `~/.oatmeal/venv` python. An edit here does nothing until re-copied/
+  reinstalled — after changing `oatmeal.py`, diff against `~/.oatmeal/oatmeal.py`
+  and update it deliberately.
+- Sync runs hourly at :00; the mycelium distiller (`com.oatmeal.pipeline`) runs
+  at :15. Logs: `~/mycelium/logs/oatmeal-sync.log` / `.err.log`.
+
 Sensitive-content routing rules (what may leave the MacBook) live in the
 mycelium context, not here — read `~/mycelium/CONTEXT.md` before changing where
 any output syncs.
